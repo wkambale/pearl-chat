@@ -1,0 +1,1 @@
+Checkpoint commit was successful to /Users/macairm1/Documents/GitHub/pearl-chat/checkpoints/pearlchat-warm-start/step_80/model_state
