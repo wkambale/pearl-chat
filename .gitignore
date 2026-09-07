@@ -1,0 +1,38 @@
+# Byte-compiled and optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cache directories
+.cache/
+*.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution and packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Markdown files (ignore all markdown files except readme)
+*.md
+**/*.md
+!README.md
+!readme.md
+!**/README.md
+!**/readme.md

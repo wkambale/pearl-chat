@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pearlchat"
+version = "0.1.0"
+description = "Native Luganda language model built from scratch in pure JAX using Flax NNX"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jax>=0.4.30",
+    "jaxlib>=0.4.30",
+    "flax>=0.10.0",
+    "optax>=0.2.0",
+    "orbax-checkpoint>=0.6.0",
+    "grain>=0.2.0",
+    "tokenizers>=0.19.0",
+    "datasets>=2.20.0",
+    "numpy>=1.26.0",
+    "gradio>=4.40.0",
+    "tqdm>=4.66.0",
+    "pytest>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
