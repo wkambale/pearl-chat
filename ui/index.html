@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Pearl-Chat: Native Luganda language model inference interface powered by pure JAX and Flax NNX.">
+  <title>Pearl-Chat inference console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/style.css?v=2">
+</head>
+
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="app-title">Pearl-Chat</h1>
+        <p class="app-subtitle">Native Luganda language model in Flax NNX</p>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="section-title">Model source</h2>
+        <div class="source-field">
+          <label for="model-source-input" class="field-label">Hugging Face repository</label>
+          <div class="input-with-button">
+            <input type="text" id="model-source-input" class="text-input" placeholder="kambale/pearl-chat"
+              value="kambale/pearl-chat">
+            <button id="load-model-button" class="btn btn-secondary" type="button">Load</button>
+          </div>
+        </div>
+        <div id="model-status-card" class="status-card">
+          <div class="status-row">
+            <span class="status-label">Status</span>
+            <span id="model-status-text" class="status-value">Ready</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Parameters</span>
+            <span id="param-count-text" class="status-value">Calculating</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Vocabulary</span>
+            <span id="vocab-size-text" class="status-value">4,096</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Context length</span>
+            <span id="context-len-text" class="status-value">256 tokens</span>
+          </div>
+          <div class="status-row">
+            <span class="status-label">Backend</span>
+            <span id="backend-text" class="status-value">JAX</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="section-title">Generation parameters</h2>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <label for="temp-slider" class="field-label">Temperature</label>
+            <span id="temp-value" class="slider-display">0.70</span>
+          </div>
+          <input type="range" id="temp-slider" min="0.0" max="1.5" step="0.05" value="0.70">
+        </div>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <label for="top-p-slider" class="field-label">Top-p (nucleus)</label>
+            <span id="top-p-value" class="slider-display">0.90</span>
+          </div>
+          <input type="range" id="top-p-slider" min="0.1" max="1.0" step="0.05" value="0.90">
+        </div>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <label for="top-k-slider" class="field-label">Top-k</label>
+            <span id="top-k-value" class="slider-display">40</span>
+          </div>
+          <input type="range" id="top-k-slider" min="1" max="100" step="1" value="40">
+        </div>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <label for="max-tokens-slider" class="field-label">Maximum new tokens</label>
+            <span id="max-tokens-value" class="slider-display">64</span>
+          </div>
+          <input type="range" id="max-tokens-slider" min="16" max="256" step="16" value="64">
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2 class="section-title">Sample prompts in Luganda</h2>
+        <div class="prompt-suggestions">
+          <button class="prompt-chip" type="button" data-prompt="Oli otya?">Oli otya?</button>
+          <button class="prompt-chip" type="button" data-prompt="Uganda nsi ndungi eri mu Buvanjuba bwa Afirika.">Uganda
+            nsi ndungi</button>
+          <button class="prompt-chip" type="button"
+            data-prompt="Abayizi bagenda ku masomero okufuna amagezi n'obukugu.">Abayizi ku masomero</button>
+          <button class="prompt-chip" type="button" data-prompt="Ekibuga Kampala kiriko abantu bangi.">Ekibuga
+            Kampala</button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="clear-chat-button" class="btn btn-outline" type="button">Clear conversation</button>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-header">
+        <div class="header-info">
+          <h2 class="chat-title">Conversation</h2>
+          <p class="chat-description">Luganda language generation with streaming tokens</p>
+        </div>
+        <div class="header-metrics">
+          <div class="metric-item">
+            <span class="metric-label">Tokens:</span>
+            <span id="metric-tokens" class="metric-val">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Speed:</span>
+            <span id="metric-speed" class="metric-val">0.0 tok/s</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="chat-messages" class="chat-messages-container" aria-live="polite">
+        <div class="message-wrapper assistant-wrapper">
+        </div>
+      </section>
+
+      <footer class="chat-input-area">
+        <form id="chat-form" class="chat-form">
+          <div class="input-container">
+            <textarea id="prompt-input" class="prompt-textarea"
+              placeholder="Wandiika ebigambo byo mu Luganda (for example: Oli otya?)..." rows="1" required></textarea>
+            <button id="send-button" class="btn btn-primary" type="submit">
+              Send
+            </button>
+            <button id="stop-button" class="btn btn-danger hidden" type="button">
+              Stop
+            </button>
+          </div>
+        </form>
+      </footer>
+    </main>
+  </div>
+
+  <script src="/app.js?v=2"></script>
+</body>
+
+</html>

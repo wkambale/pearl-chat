@@ -36,3 +36,6 @@ Thumbs.db
 !readme.md
 !**/README.md
 !**/readme.md
+
+# Model checkpoints and cache
+checkpoints/

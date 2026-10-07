@@ -1,165 +1,125 @@
 # Pearl-Chat: Native Luganda language model in pure JAX
 
-Pearl-Chat is a decoder-only transformer implemented from scratch in pure JAX using
-Flax NNX, Optax, Orbax, and Grain. The model is trained on Luganda text with a custom
-byte-level BPE tokenizer.
+Pearl-Chat is a decoder-only causal transformer implemented from scratch in pure JAX using Flax NNX, Optax, Orbax, and Grain. It is trained on native Luganda text with a custom byte-level BPE tokenizer and served via a standalone notebook and a minimal local web application.
 
-## System verification
+The trained model checkpoint and tokenizer are published on the Hugging Face Hub at [kambale/pearl-chat](https://huggingface.co/kambale/pearl-chat).
 
-Hardware and backend verified during project setup:
+## Project overview
 
-```
-Backend: cpu
-Devices: [CpuDevice(id=0)]
-Python version: 3.11.15
-Framework: JAX + Flax NNX (no PyTorch, no TensorFlow)
-```
+- Author: Wesley Kambale
+- Workshop: "Building Pearl-Chat: Engineering a Native Language Model from Scratch in Pure JAX", PyCon Africa 2026.
+- Architecture: Decoder-only Transformer (GPT-2 style) with explicit Flax NNX state.
+- Target language: Luganda (`lg`).
+- Framework: Pure JAX and Flax NNX. No PyTorch, no TensorFlow.
+- Hugging Face repository: `kambale/pearl-chat`
 
-For distributed training and device mesh demonstration, the framework configures
-eight logical devices via XLA host platform flags.
+## Model specifications
 
-## Project metrics and real data
+| Parameter | Value |
+| :--- | :--- |
+| Model type | Causal autoregressive decoder |
+| Parameter count | 8,473,122 trainable parameters (~8.5M parameter model) |
+| Vocabulary size | 8,192 byte-level BPE tokens |
+| Context length | 256 tokens |
+| Layers | 8 transformer decoder blocks |
+| Attention heads | 8 heads (head dimension 32) |
+| Embedding dimension | 256 |
+| Feed-forward dimension | 1024 (4x embedding dimension) |
+| Weight tying | Output projection tied to input embedding table |
+| Training curriculum | Two-stage curriculum (Stage 1 foundational pre-training + Stage 2 assistant-masked conversational SFT) |
+| Training optimizer | Optax AdamW with warmup cosine decay schedule |
+| Training throughput | ~100,000 tokens/sec on NVIDIA GPU |
 
-- Raw Luganda corpus: 4,048 articles from Luganda Wikipedia (`wikimedia/wikipedia 20231101.lg`)
-- Processed dataset: 33,307 deduplicated lines
-  - Training split: 31,642 lines (`data/processed/train.txt`)
-  - Validation split: 1,665 lines (`data/processed/val.txt`)
-- Tokenizer: custom Luganda byte-level BPE (`vocab.json`, `merges.txt`)
-  - Vocabulary size: 4,096 tokens
-  - Compression benchmark: 71 characters condensed into 16 native tokens
-- Model configuration:
-  - Architecture: GPT-2 style decoder-only transformer
-  - Layers: 4
-  - Attention heads: 4
-  - Embedding dimension: 128
-  - Feed-forward dimension: 512
-  - Context length: 128 tokens
-  - Parameter count: 1,331,986 parameters
-- Performance on laptop CPU:
-  - Training throughput: approximately 16,500 tokens per second
-  - Training loss: decreased from 8.88 to 7.20 in 60 steps
-  - Live workshop resumption: runs in under 20 seconds for 20 steps
+## Training data composition
 
-## Repository structure
+The model is trained using a two-stage curriculum across four Hugging Face datasets and curated conversational splits:
+1. Luganda-English Parallel Corpus (`kambale/luganda-english-parallel-corpus`): Over 25,000 unique contemporary Luganda-English parallel sentence pairs used in Stage 1 foundational pre-training and Stage 2 bilingual translation instruction tuning.
+2. Luganda-English Bible Corpus (`kambale/luganda-english-bible-corpus`): Over 30,800 unique Luganda verses (with leading verse numbers and chapter headers stripped) used in Stage 1 foundational pre-training and BPE tokenizer fitting to instill broad Bantu verb morphology and noun-class concords.
+3. Luganda Wikipedia (`wikimedia/wikipedia` `20231101.lg` split): Encyclopedic articles covering geography, history, and society in Uganda.
+4. Sunbird/salt dataset (`text-all` subset): Strictly filtered English-Luganda parallel translation pairs (`eng_source_text` and `lug_text`).
+5. Curated conversational dialogues: Native Luganda greetings, geography queries, courtesies, and question-answer pairs formatted using structured speaker-turn tags (`Omuntu: <query>\nOmuyambi: <response>`) with assistant-only loss masking in Stage 2.
+
+## Repository layout
 
 ```
 pearl-chat/
-  pyproject.toml               # project metadata and dependencies
-  Makefile                     # workflow targets
-  README.md                    # project documentation and benchmarks
-  requirements.md              # specification and requirements
-  AGENTS.md                    # agent guidelines and formatting constraints
-  data/
-    raw/                       # raw Luganda text downloads
-    processed/                 # cleaned and split Luganda corpus
-    tokenizer/                 # trained BPE vocab and merge files
-  src/pearlchat/
-    config.py                  # dataclasses for model, training, and sharding
-    tokenizer.py               # LugandaTokenizer wrapper
-    data_pipeline.py           # deterministic Grain pipeline and data sources
-    model.py                   # Flax NNX transformer and causal attention
-    checkpointing.py           # Orbax save and restore management
-    train.py                   # training step, schedule, and metrics logger
-    sharding.py                # JAX mesh and array sharding utilities
-    generate.py                # autoregressive sampling (top-k, top-p)
-  scripts/
-    01_fetch_data.py           # dataset download with fallback support
-    02_train_tokenizer.py      # text normalization and tokenizer training
-    03_prepare_dataset.py      # dataset splitting into train and val
-    04_train_pearlchat.py      # training in full or live workshop mode
-    05_run_chat_demo.py        # terminal inference interface
-    06_sharding_visual_demo.py # visual 8-device sharding demonstration
-  notebooks/
-    workshop_walkthrough.ipynb # interactive spine walkthrough for the session
-    colab_training.ipynb       # Google Colab GPU / TPU training notebook
-  checkpoints/
-    pearlchat-warm-start/      # pre-trained warm-start checkpoint
-    logs/                      # training metric logs (CSV)
-  tests/
-    test_tokenizer.py          # round-trip encoding and special token tests
-    test_data_pipeline.py      # Grain batching and checkpoint resumption tests
-    test_model_shapes.py       # shapes and causal masking tests
-    test_train_step.py         # training loss drop and reproduction tests
-    test_sharding.py           # mesh reassembly tests
+  README.md                              # project documentation and guides
+  LICENSE                                # Apache 2.0 license
+  .gitignore                             # git ignore patterns
+  app.py                                 # entry point to launch the local web application
   ui/
-    chat_app.py                # Gradio chat interface
+    chat_app.py                          # self-contained local inference server and model runtime
+    index.html                           # web application front end
+    app.js                               # interactive client logic and streaming handler
+    style.css                            # custom design system and layout styling
 ```
 
-## Setup instructions
+## Running the standalone notebook in Google Colab
 
-1. Create a Python 3.11 virtual environment and install dependencies:
+The repository includes a completely standalone, self-contained notebook. It defines all models, tokenizers, data loaders, training loops, and generation helpers inline. It can be run on Google Colab without cloning the repository or installing custom packages.
+
+1. Open [Google Colab](https://colab.research.google.com).
+2. Click **File** -> **Upload the notebook**
+3. Set the runtime to **GPU** (T4 or A100) or **TPU**.
+4. (Optional) Provide your Hugging Face token in Colab Secrets under `HF_TOKEN` if you wish to push new checkpoints.
+5. Select **Runtime** -> **Run all**.
+
+The notebook executes the complete end-to-end lifecycle:
+- Accelerator verification in JAX.
+- Luganda text acquisition, cleaning, and dialogue oversampling across four datasets (`kambale/luganda-english-parallel-corpus`, `kambale/luganda-english-bible-corpus`, Luganda Wikipedia, and `Sunbird/salt`).
+- From-scratch Byte-Level BPE tokenizer training (8,192 vocabulary).
+- Deterministic data loading and batch packing with Google Grain.
+- GPT-2 model definition (~8.5M parameters, 8 layers, 8 heads) and functional state inspection (`nnx.split` and `nnx.merge`).
+- Two-stage training loop (Stage 1 foundational pre-training + Stage 2 assistant-masked conversational fine-tuning) with Optax AdamW and smoothed Exponential Moving Average (EMA) loss tracking.
+- Sharding and device mesh demonstration across logical devices.
+- Autoregressive text generation using speaker-turn prompting (`Omuntu: ... Omuyambi: ...`).
+- Staging and deployment to the Hugging Face Hub, plus offline `.tar.gz` bundle export.
+- In-notebook interactive Gradio chat interface.
+- Checkpoint restoration and continuous fine-tuning from `kambale/pearl-chat`.
+
+## Local web application
+
+The repository includes a self-contained local web application (`app.py` and `ui/`) for chatting with the model using real-time token streaming.
+
+### Launching the web application
 
 ```bash
-uv venv --python /opt/homebrew/bin/python3.11 .venv
-source .venv/bin/activate
-uv pip install -e .
+# Launch server with local checkpoint or Hugging Face Hub model (kambale/pearl-chat)
+python3 app.py
+
+# Or specify a custom port or checkpoint
+python3 app.py --port 7860 --checkpoint checkpoints/pearl-chat
 ```
 
-2. Run the automated test suite:
-
-```bash
-pytest -v tests
+Open your browser and navigate to:
+```
+http://127.0.0.1:7860/
 ```
 
-## Quick start pipeline
+### Features of the web application
 
-The project includes standard Makefile targets to execute each stage:
+- Automatic checkpoint loading: Seamlessly loads from the bundled `checkpoints/pearl-chat` directory or downloads from the Hugging Face Hub (`kambale/pearl-chat`).
+- Server-Sent Events (SSE): Streams generated tokens one by one as they are computed.
+- Conversational template handling: Formats incoming prompts with `Omuntu: <prompt>\nOmuyambi:` and stops on subsequent turn boundaries.
+- Generation parameter controls: Sliders for temperature, top-p (nucleus), top-k, and maximum generated tokens.
+- Live performance metrics: Displays token count and generation throughput in tokens per second.
+- Suggested Luganda prompts: Instant one-click starters for greetings, geography, translation, and everyday questions.
 
-```bash
-# Fetch raw corpus and train tokenizer
-make tokenizer
+## Citation
 
-# Prepare train and validation splits
-make dataset
+If you use Pearl-Chat or the associated training pipeline in your research or educational materials, please cite:
 
-# Train warm-start model
-make train
-
-# Run live workshop continuation (resumes from checkpoint)
-make train-live
-
-# Launch web chat interface
-make chat
+```bibtex
+@misc{kambale2026pearlchat,
+  author = {Wesley Kambale},
+  title = {Pearl-Chat: Engineering a Native Language Model from Scratch in Pure JAX},
+  year = {2026},
+  publisher = {Hugging Face},
+  howpublished = {https://huggingface.co/kambale/pearl-chat},
+  note = {PyCon Africa 2026}
+}
 ```
 
-## Running the sharding demo
+## License
 
-The device mesh demo runs on any machine by simulating eight logical CPU devices:
-
-```bash
-python scripts/06_sharding_visual_demo.py
-```
-
-This displays an ASCII layout of data-parallel batch partitioning across the `data`
-axis and tensor-parallel weight projection partitioning across the `model` axis.
-
-## Terminal chat demonstration
-
-To generate Luganda responses directly in your terminal:
-
-```bash
-python scripts/05_run_chat_demo.py --prompt "Oli otya?" --max-tokens 48
-```
-
-## Training in Google Colab (GPU or TPU)
-
-For accelerated pre-training on Google Colab:
-
-1. Open `notebooks/colab_training.ipynb` in Google Colab.
-2. Select a GPU runtime (T4, V100, A100, or L4) or a TPU v2/v3 runtime.
-3. If using gated datasets such as `Sunbird/salt`, store your Hugging Face access
-   token in Colab Secrets under `HF_TOKEN`.
-4. Run the notebook top to bottom. The script will automatically detect the
-   accelerator backend, pull the dataset, train the tokenizer, and run full
-   pre-training with larger batch sizes.
-
-## Troubleshooting
-
-- No GPU detected: JAX defaults to CPU execution automatically. The live track
-  is tuned so that CPU training completes in under five minutes.
-- Out of memory: decrease `batch_size` in `scripts/04_train_pearlchat.py` or
-  reduce `context_length` from 128 to 64.
-- Checkpoint directory: Orbax requires absolute paths for tensorstore storage.
-  The `CheckpointManager` class handles path resolution automatically.
-- Grain iterator determinism: ensure the dataset files under `data/processed/`
-  remain unmodified between checkpoint save and resumption.
+MIT License
