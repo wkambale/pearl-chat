@@ -29,10 +29,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const metricTokens = document.getElementById('metric-tokens');
   const metricSpeed = document.getElementById('metric-speed');
 
+  const themeToggleButton = document.getElementById('theme-toggle-button');
+  const themeToggleLabel = document.getElementById('theme-toggle-label');
+  const themeIconSun = document.getElementById('theme-icon-sun');
+  const themeIconMoon = document.getElementById('theme-icon-moon');
+
   const promptChips = document.querySelectorAll('.prompt-chip');
 
   let activeAbortController = null;
   let isGenerating = false;
+
+  // Theme management
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('pearlchat-theme', theme);
+    if (theme === 'light') {
+      if (themeToggleLabel) themeToggleLabel.textContent = 'Dark mode';
+      if (themeIconSun) themeIconSun.classList.add('hidden');
+      if (themeIconMoon) themeIconMoon.classList.remove('hidden');
+    } else {
+      if (themeToggleLabel) themeToggleLabel.textContent = 'Light mode';
+      if (themeIconSun) themeIconSun.classList.remove('hidden');
+      if (themeIconMoon) themeIconMoon.classList.add('hidden');
+    }
+  }
+
+  const savedTheme = localStorage.getItem('pearlchat-theme') || 'dark';
+  applyTheme(savedTheme);
+
+  if (themeToggleButton) {
+    themeToggleButton.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
 
   // Sync sliders
   tempSlider.addEventListener('input', () => {
