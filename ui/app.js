@@ -155,14 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Clear conversation
   clearChatButton.addEventListener('click', () => {
-    chatMessages.innerHTML = `
-      <div class="message-wrapper assistant-wrapper">
-        <div class="message-sender">Assistant</div>
-        <div class="message-content">
-          Oli otya? Nze Pearl-Chat, omuyambi w'olulimi Oluganda akozesa JAX ne Flax NNX. Wandiika ekibuuzo kyo wano wansi.
-        </div>
-      </div>
-    `;
+    chatMessages.innerHTML = '';
     metricTokens.textContent = '0';
     metricSpeed.textContent = '0.0 tok/s';
   });
